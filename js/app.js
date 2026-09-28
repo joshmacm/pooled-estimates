@@ -40,7 +40,7 @@
       
       // Select initial default station
       const defaultId = stationsMap['59001'] ? '59001' : (appData.stations[0]?.station_id || '54014');
-      selectStation(defaultId);
+      selectStation(defaultId, false);
     } catch (err) {
       console.error('Initialization error:', err);
       alert('Error initializing dashboard data: ' + err.message);
@@ -188,7 +188,7 @@
     // If current station is not in filtered list, select the first available
     const exists = filtered.some(s => s.station_id === currentStationId);
     if (!exists && filtered.length > 0) {
-      selectStation(filtered[0].station_id);
+      selectStation(filtered[0].station_id, false);
     } else if (exists) {
       tomSelectInstance.setValue(currentStationId, true);
     }
@@ -197,7 +197,7 @@
   // ---------------------------------------------------------------------------
   // 4. Station Selection & Reactive Updates
   // ---------------------------------------------------------------------------
-  function selectStation(stationId) {
+  function selectStation(stationId, panMap = true) {
     stationId = String(stationId);
     if (!stationsMap[stationId]) return;
 
@@ -211,10 +211,16 @@
     renderZdistsPlot(stn);
     renderPoolingGroupTable(stationId);
 
-    // Update map marker active state & pan
+    // Update map marker active state & pan if requested
     if (leafletMap && stn.latitude && stn.longitude) {
       updateActiveMarker(stn);
-      leafletMap.setView([stn.latitude, stn.longitude], 9);
+      if (panMap) {
+        if (leafletMap.getZoom() < 8) {
+          leafletMap.setView([stn.latitude, stn.longitude], 8);
+        } else {
+          leafletMap.panTo([stn.latitude, stn.longitude]);
+        }
+      }
     }
   }
 
@@ -246,10 +252,10 @@
   // 6. Interactive Leaflet Map
   // ---------------------------------------------------------------------------
   function initMap() {
-    // Initial center on Wales / UK
+    // Initial center on whole UK at zoom 6
     leafletMap = L.map('map', {
-      center: [52.5, -3.5],
-      zoom: 7,
+      center: [54.5, -3.8],
+      zoom: 6,
       zoomControl: true
     });
 
@@ -279,10 +285,15 @@
     markersLayer.clearLayers();
 
     const stations = getFilteredStations();
+    const latLngs = [];
+
     stations.forEach(s => {
       if (!s.latitude || !s.longitude) return;
+      const lat = parseFloat(s.latitude);
+      const lng = parseFloat(s.longitude);
+      latLngs.push([lat, lng]);
 
-      const marker = L.circleMarker([s.latitude, s.longitude], {
+      const marker = L.circleMarker([lat, lng], {
         radius: 6,
         color: '#004b57',
         weight: 1.2,
@@ -291,10 +302,18 @@
       });
 
       marker.bindTooltip(`<b>${s.station_id}</b>: ${s.station_name}<br>River: ${s.river}`);
-      marker.on('click', () => selectStation(s.station_id));
+      marker.on('click', () => selectStation(s.station_id, true));
 
       markersLayer.addLayer(marker);
     });
+
+    if (latLngs.length > 0) {
+      if (currentRegion === 'All UK') {
+        leafletMap.setView([54.5, -3.8], 6);
+      } else {
+        leafletMap.fitBounds(latLngs, { padding: [30, 30], maxZoom: 9 });
+      }
+    }
 
     const currentStn = stationsMap[currentStationId];
     if (currentStn) updateActiveMarker(currentStn);
