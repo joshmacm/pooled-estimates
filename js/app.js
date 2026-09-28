@@ -583,7 +583,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // 10. Pooling Group Donors Table
+  // 10. Pooling Group Stations Table
   // ---------------------------------------------------------------------------
   function renderPoolingGroupTable(stationId) {
     const donors = poolingByStation[stationId] || [];

@@ -27,7 +27,8 @@ stations <- read.csv(summary_file, stringsAsFactors = FALSE) %>%
       measuring_authority_id == "NRW" ~ "NRW (Wales)",
       grepl("EA-", measuring_authority_id) ~ "EA (England)",
       grepl("SEPA", measuring_authority_id) ~ "SEPA (Scotland)",
-      TRUE ~ "Other UK"
+      grepl("DFI", measuring_authority_id, ignore.case = TRUE) ~ "DFI (Northern Ireland)",
+      TRUE ~ "Other"
     ),
     display_label = paste0(station_id, " - ", station_name, " (", river, ")")
   ) %>%
