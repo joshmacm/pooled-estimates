@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pooled Flood Frequency Estimates</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Bootstrap 5.3 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  
+  <!-- DataTables Bootstrap 5 CSS -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+  
+  <!-- Tom Select CSS for modern searchable dropdown -->
+  <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+  
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <nav class="navbar navbar-expand-md navbar-dark navbar-custom sticky-top">
+    <div class="container-fluid">
+      <a class="navbar-brand navbar-brand-text d-flex align-items-center" href="#">
+        <i class="fas fa-water me-2"></i>
+        <span>Pooled Flood Frequency Estimates</span>
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarContent">
+        <ul class="navbar-nav ms-auto nav-custom-tabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="single-station-tab" data-bs-toggle="tab" data-bs-target="#single-station" type="button" role="tab" aria-selected="true">
+              <i class="fas fa-chart-line me-1"></i> Single Station
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="summary-table-tab" data-bs-toggle="tab" data-bs-target="#summary-table" type="button" role="tab" aria-selected="false">
+              <i class="fas fa-table-list me-1"></i> Summary Table
+            </button>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="container-fluid py-3 px-md-4">
+    <div class="tab-content" id="mainTabContent">
+      
+      <!-- ===================================================================== -->
+      <!-- TAB 1: Single Station                                                 -->
+      <!-- ===================================================================== -->
+      <div class="tab-pane fade show active" id="single-station" role="tabpanel" aria-labelledby="single-station-tab">
+        <div class="row g-3">
+          
+          <!-- Left Sidebar Panel -->
+          <div class="col-lg-3 col-md-4">
+            <div class="sidebar-panel">
+              <div class="sidebar-title">
+                <i class="fas fa-sliders text-primary"></i> Station Selection & Downloads
+              </div>
+              
+              <!-- Region Filter -->
+              <div class="mb-3">
+                <label for="regionFilter" class="form-label fw-semibold text-secondary small">Filter by Region / Authority:</label>
+                <select id="regionFilter" class="form-select form-select-sm">
+                  <option value="All UK" selected>All UK</option>
+                  <option value="NRW (Wales)">NRW (Wales)</option>
+                  <option value="EA (England)">EA (England)</option>
+                  <option value="SEPA (Scotland)">SEPA (Scotland)</option>
+                  <option value="Other UK">Other UK</option>
+                </select>
+              </div>
+              
+              <!-- Station Select Dropdown -->
+              <div class="mb-3">
+                <label for="stationSelect" class="form-label fw-semibold text-secondary small">Select Gauging Station:</label>
+                <select id="stationSelect" placeholder="Search by ID, name or river..."></select>
+              </div>
+              
+              <!-- Station Quick Info Card -->
+              <div id="stationQuickInfo" class="station-info-box mb-3">
+                <!-- Dynamically populated -->
+              </div>
+              
+              <hr class="my-3 text-muted opacity-25">
+              
+              <!-- Downloads Section -->
+              <div class="mb-3">
+                <label class="form-label fw-semibold text-secondary small d-block mb-2">Download Station Data</label>
+                <button id="btnDlFlows" class="btn btn-outline-primary btn-sm w-100 mb-2">
+                  <i class="fas fa-download me-1"></i> Download Flood Estimates (.csv)
+                </button>
+                <button id="btnDlPooling" class="btn btn-outline-secondary btn-sm w-100">
+                  <i class="fas fa-download me-1"></i> Download Pooling Group (.csv)
+                </button>
+              </div>
+              
+              <hr class="my-3 text-muted opacity-25">
+              
+              <!-- Export All Data Section -->
+              <div class="mb-3">
+                <label class="form-label fw-semibold text-secondary small d-block mb-2">Export All Data</label>
+                <button id="btnDlAllZip" class="btn btn-primary btn-sm w-100">
+                  <i class="fas fa-file-zipper me-1"></i> Export All Data (.zip)
+                </button>
+              </div>
+              
+              <!-- Version info badge box -->
+              <div class="badge-version text-center mt-3">
+                <i class="fas fa-database text-secondary me-1"></i> Peak Flows V15 and UKFE 2.15.1
+              </div>
+            </div>
+          </div>
+          
+          <!-- Right Content Columns -->
+          <div class="col-lg-9 col-md-8">
+            
+            <!-- Row 1: Map and Design Flows Table -->
+            <div class="row g-3 mb-3">
+              <!-- Map Column -->
+              <div class="col-lg-5">
+                <div class="card-custom">
+                  <div class="card-custom-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-map-location-dot text-primary me-1"></i> UK Pooling Station Map</span>
+                    <small class="text-muted">Click any marker</small>
+                  </div>
+                  <div id="map"></div>
+                </div>
+              </div>
+              
+              <!-- Design Flows Table Column -->
+              <div class="col-lg-7">
+                <div class="card-custom">
+                  <div class="card-custom-header">
+                    <span><i class="fas fa-table text-primary me-1"></i> Flood Frequency Estimates & Confidence Intervals</span>
+                  </div>
+                  <div class="p-2 table-responsive">
+                    <table id="flowsTable" class="table table-sm table-striped table-hover table-custom w-100">
+                      <thead>
+                        <tr>
+                          <th>Return Period (yrs)</th>
+                          <th>Design Flow (m³/s)</th>
+                          <th>Growth Factor</th>
+                          <th>FSE</th>
+                          <th>Lower 95% CI</th>
+                          <th>Upper 95% CI</th>
+                        </tr>
+                      </thead>
+                      <tbody></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Row 2: Dedicated Full-Width Flood Frequency Plot -->
+            <div class="card-custom mb-3">
+              <div class="card-custom-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <span><i class="fas fa-chart-area text-primary me-1"></i> Flood Frequency & Growth Curve Analysis</span>
+                <div class="d-flex align-items-center gap-3">
+                  <!-- Mode radio -->
+                  <div class="btn-group btn-group-sm" role="group" aria-label="Plot view mode">
+                    <input type="radio" class="btn-check" name="plotMode" id="modeQ" value="Q" checked>
+                    <label class="btn btn-outline-primary" for="modeQ">Design Flow (Q)</label>
+                    <input type="radio" class="btn-check" name="plotMode" id="modeGF" value="GF">
+                    <label class="btn btn-outline-primary" for="modeGF">Growth Factor (GF)</label>
+                  </div>
+                  <!-- Scale radio -->
+                  <div class="btn-group btn-group-sm" role="group" aria-label="Plot scale mode">
+                    <input type="radio" class="btn-check" name="plotScale" id="scaleLogLog" value="log" checked>
+                    <label class="btn btn-outline-secondary" for="scaleLogLog">Log-Log</label>
+                    <input type="radio" class="btn-check" name="plotScale" id="scaleSemiLog" value="linear">
+                    <label class="btn btn-outline-secondary" for="scaleSemiLog">Semi-Log</label>
+                  </div>
+                </div>
+              </div>
+              <div class="p-2">
+                <div id="freqPlot" class="plot-container"></div>
+              </div>
+            </div>
+            
+            <!-- Row 3: Calculation Diagnostics Tabs -->
+            <div class="card-custom">
+              <div class="card-custom-header">
+                Calculation Diagnostics & Pooling Group
+              </div>
+              <div class="p-3">
+                <ul class="nav nav-pills mb-3" id="diagnosticsPills" role="tablist">
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link active btn-sm" id="pills-zdists-tab" data-bs-toggle="pill" data-bs-target="#pills-zdists" type="button" role="tab">
+                      Goodness-of-Fit (Zdists)
+                    </button>
+                  </li>
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link btn-sm" id="pills-pooling-tab" data-bs-toggle="pill" data-bs-target="#pills-pooling" type="button" role="tab">
+                      Pooling Group Donors
+                    </button>
+                  </li>
+                </ul>
+                
+                <div class="tab-content" id="diagnosticsTabContent">
+                  <!-- Goodness of Fit Tab -->
+                  <div class="tab-pane fade show active" id="pills-zdists" role="tabpanel">
+                    <div id="zdistsBanner" class="diagnostics-banner">
+                      <i class="fas fa-circle-info"></i>
+                      <span id="zdistsBannerText">Best-fit model selected by minimum absolute Z-score. Values below the 1.645 threshold line represent acceptable fits.</span>
+                    </div>
+                    <div id="zdistsPlot" class="zdists-plot-container"></div>
+                  </div>
+                  
+                  <!-- Pooling Group Tab -->
+                  <div class="tab-pane fade" id="pills-pooling" role="tabpanel">
+                    <div id="poolingStatsBar" class="stats-bar">
+                      <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-layer-group text-primary"></i>
+                        <span class="text-muted small">Number of Pooling Stations:</span>
+                        <strong id="statDonorCount" class="text-primary fs-6">-</strong>
+                      </div>
+                      <div style="border-left: 1px solid #ced4da; height: 20px;"></div>
+                      <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-calendar-days text-info"></i>
+                        <span class="text-muted small">Total Pooling Group Years:</span>
+                        <strong id="statDonorYears" class="text-info fs-6">-</strong>
+                      </div>
+                    </div>
+                    <div class="table-responsive">
+                      <table id="poolingTable" class="table table-sm table-striped table-hover table-custom w-100">
+                        <thead>
+                          <tr>
+                            <th>Donor ID</th>
+                            <th>SDM</th>
+                            <th>AREA (km²)</th>
+                            <th>SAAR (mm)</th>
+                            <th>FARL</th>
+                            <th>URBEXT2015</th>
+                            <th>L-CV</th>
+                            <th>L-SKEW</th>
+                            <th>QMED (m³/s)</th>
+                            <th>Years (N)</th>
+                            <th>Discordancy</th>
+                            <th>Non-Flood (%)</th>
+                          </tr>
+                        </thead>
+                        <tbody></tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+      </div>
+      
+      <!-- ===================================================================== -->
+      <!-- TAB 2: Summary Table                                                  -->
+      <!-- ===================================================================== -->
+      <div class="tab-pane fade" id="summary-table" role="tabpanel" aria-labelledby="summary-table-tab">
+        <div class="card-custom">
+          <div class="card-custom-header d-flex justify-content-between align-items-center">
+            <span><i class="fas fa-database text-primary me-1"></i> Station Results Catalogue (All 552 Stations)</span>
+            <button id="btnDlSummaryCsv" class="btn btn-outline-primary btn-sm">
+              <i class="fas fa-file-csv me-1"></i> Export Table (.csv)
+            </button>
+          </div>
+          <div class="p-3 table-responsive">
+            <table id="summaryTable" class="table table-sm table-striped table-hover table-custom w-100">
+              <thead>
+                <tr>
+                  <th>Station ID</th>
+                  <th>Name</th>
+                  <th>River</th>
+                  <th>Area (km²)</th>
+                  <th>Authority</th>
+                  <th>Observed QMED</th>
+                  <th>UAF</th>
+                  <th>Best Distribution</th>
+                  <th>Q2</th>
+                  <th>Q10</th>
+                  <th>Q50</th>
+                  <th>Q100</th>
+                  <th>Q1000</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+
+  <!-- jQuery & Bootstrap 5 JS -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <!-- Plotly.js -->
+  <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+  
+  <!-- DataTables JS -->
+  <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+  
+  <!-- Tom Select JS (fast searchable dropdown) -->
+  <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+  
+  <!-- JSZip & FileSaver for client-side downloads -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  
+  <!-- Embedded Data (Enables local file:// opening with NO CORS issues) -->
+  <script src="data/stations_data.js"></script>
+  
+  <!-- Main Application Logic -->
+  <script src="js/app.js"></script>
+</body>
+</html>

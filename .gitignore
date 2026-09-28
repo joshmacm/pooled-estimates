@@ -1,0 +1,9 @@
+# History and session files
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+
+# OS metadata
+.DS_Store
+Thumbs.db
